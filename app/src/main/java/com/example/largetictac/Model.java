@@ -1,0 +1,315 @@
+package com.example.largetictac;
+
+
+import java.util.ArrayList;
+import java.util.Random;
+
+public class Model {
+    public static final int EMPTY = 0;
+    public static final int PLAYER_X = 1;
+    public static final int PLAYER_O = -1;
+
+    private int[][] board;
+    private int currentPlayer = -1;
+
+    public Model() {
+        board = new int[15][15];
+        currentPlayer = PLAYER_X;
+    }
+
+    public int getCurrentPlayer() {
+        return currentPlayer;
+    }
+
+    public boolean isLegal(int row, int col) {
+        return board[row][col] == EMPTY;
+    }
+
+    public boolean makeMove(int row, int col) {
+        if (!isLegal(row, col)) return false;
+        board[row][col] = currentPlayer;
+        return true;
+    }
+
+    public void changePlayer() {
+        currentPlayer *=-1;
+    }
+
+    public boolean isLineOfLength(int row, int col, int targetLength) {
+        int player = board[row][col];
+        if (player == EMPTY) return false;
+
+
+        int[][] dirs = {
+                {1, 0},   // vertical
+                {0, 1},   // horizontal
+                {1, 1},   // diagonal ↘
+                {1, -1}   // anti-diagonal ↙
+        };
+
+        for (int[] dir : dirs) {
+            int dr = dir[0], dc = dir[1];
+
+            int count = 1;
+
+            //  Count stones forward
+            int r = row + dr, c = col + dc;
+            while (r >= 0 && r < 15 && c >= 0 && c < 15 && board[r][c] == player) {
+                count++;
+                r += dr;
+                c += dc;
+            }
+
+            //  forward end location:
+            int forwardEndR = r;
+            int forwardEndC = c;
+
+            // Count stones backward
+            r = row - dr;
+            c = col - dc;
+            while (r >= 0 && r < 15 && c >= 0 && c < 15 && board[r][c] == player) {
+                count++;
+                r -= dr;
+                c -= dc;
+            }
+
+            // backward end location:
+            int backwardEndR = r;
+            int backwardEndC = c;
+
+            //  Count available spaces to extend (forward)
+            int spacesForward = 0;
+            r = forwardEndR;
+            c = forwardEndC;
+            while (r >= 0 && r < 15 && c >= 0 && c < 15 && board[r][c] == EMPTY) {
+                spacesForward++;
+                r += dr;
+                c += dc;
+            }
+
+            //Count available spaces to extend (backward)
+            int spacesBackward = 0;
+            r = backwardEndR;
+            c = backwardEndC;
+            while (r >= 0 && r < 15 && c >= 0 && c < 15 && board[r][c] == EMPTY) {
+                spacesBackward++;
+                r -= dr;
+                c -= dc;
+            }
+
+            int totalPotential = count + spacesForward + spacesBackward;
+
+            //  Check if it is even possible to reach the target length
+            if (totalPotential < targetLength) continue;  // Can't become target length
+
+            // Count requirement already met
+            if (count >= targetLength) return true;
+
+            // Otherwise not a valid extendable line
+        }
+
+        return false;
+    }
+
+
+    public int checkWin(int row, int col) {
+        int player = board[row][col];  // The player who placed this piece
+        if (player == EMPTY) return EMPTY;
+
+        // Directions: vertical, horizontal, diagonal ↘, anti-diagonal ↙
+        int[][] directions = {
+                {1, 0},   // vertical
+                {0, 1},   // horizontal
+                {1, 1},   // main diagonal
+                {1, -1}   // anti-diagonal
+        };
+
+        for (int[] dir : directions) {
+            int dr = dir[0], dc = dir[1];
+            int count = 1; // count the current stone
+
+            // go forward
+            for (int step = 1; step < 5; step++) {
+                int r = row + dr * step;
+                int c = col + dc * step;
+                if (r < 0 || r > 14 || c < 0 || c > 14) break;
+                if (board[r][c] == player) count++;
+                else break;
+            }
+
+            // go backward
+            for (int step = 1; step < 5; step++) {
+                int r = row - dr * step;
+                int c = col - dc * step;
+                if (r < 0 || r > 14 || c < 0 || c > 14) break;
+                if (board[r][c] == player) count++;
+                else break;
+            }
+
+            if (count >= 5) return player; // Winner found!
+        }
+
+        return EMPTY; // No winner
+    }
+    public int countStones(int row, int col, int player, int[] dir) {
+        int dr = dir[0], dc = dir[1];
+        int count = 1;
+
+        // forward
+        int r = row + dr, c = col + dc;
+        while (r >= 0 && r < 15 && c >= 0 && c < 15 && board[r][c] == player) {
+            count++;
+            r += dr;
+            c += dc;
+        }
+
+        // backward
+        r = row - dr;
+        c = col - dc;
+        while (r >= 0 && r < 15 && c >= 0 && c < 15 && board[r][c] == player) {
+            count++;
+            r -= dr;
+            c -= dc;
+        }
+
+        return count;
+    }
+
+
+
+
+
+
+
+    public boolean isTie() {
+        // If all cells filled and no winner
+        for(int i = 0;i<15;i++){
+            for(int j = 0; j<15;j++){
+                if(board[i][j]==0) return false;
+            }
+        }
+        return true;
+    }
+
+    public void resetGame() {
+        for (int i = 0; i < 15; i++) {
+            for (int j = 0; j < 15; j++) {
+                board[i][j] = EMPTY;
+            }
+        }
+        currentPlayer = PLAYER_X;
+    }
+
+    public ArrayList<Move> getPossibleMoves() {
+        ArrayList<Move> moves = new ArrayList<>();
+        for (int i = 0; i < 15; i++) {
+            for (int j = 0; j < 15; j++) {
+                if (board[i][j] == EMPTY) {
+                    moves.add(new Move(i, j));
+                }
+            }
+        }
+        return moves;
+    }
+
+    public int getNumOfAdjacentSlots(int row, int col) {
+        int sum = 0;
+        for (int R = row - 1; R <= row + 1; R++) {
+            for (int C = col - 1; C <= col + 1; C++) {
+                if (R < 0 || R > 14 || C < 0 || C > 14) continue;
+                if (R == row && C == col) continue;
+                if (board[R][C] != EMPTY) sum++;
+            }
+        }
+        return sum;
+    }
+    public ArrayList<Move> getPossibleAdjacentMoves() {
+        ArrayList<Move> moves = new ArrayList<>();
+        for (int i = 0; i < 15; i++) {
+            for (int j = 0; j < 15; j++) {
+                if (board[i][j] == EMPTY && getNumOfAdjacentSlots(i,j)>0) {
+                    moves.add(new Move(i, j));
+                }
+            }
+        }
+        return moves;
+
+
+    }
+    public Move getRandomMove() {
+        ArrayList<Move> moves = getPossibleAdjacentMoves();
+        if (moves.isEmpty()) return null; // No moves left
+        Random rand = new Random();
+        return moves.get(rand.nextInt(moves.size()));
+    }
+
+    public Move getHeuristicMove(int aiPlayer, int humanPlayer) {
+
+        ArrayList<Move> moves = getPossibleAdjacentMoves();
+
+        //get five in a row
+        for (Move m : moves) {
+            board[m.row][m.col] = aiPlayer;
+            if (isLineOfLength(m.row, m.col, 5)) {
+                board[m.row][m.col] = EMPTY;
+                return m;
+            }
+            board[m.row][m.col] = EMPTY;
+        }
+
+        //block five in a row
+        for (Move m : moves) {
+            board[m.row][m.col] = humanPlayer;
+            if (isLineOfLength(m.row, m.col, 5)) {
+                board[m.row][m.col] = EMPTY;
+                return m;
+            }
+            board[m.row][m.col] = EMPTY;
+        }
+
+        //alternate with 4
+        for (Move m : moves) {
+            board[m.row][m.col] = aiPlayer;
+            if (isLineOfLength(m.row, m.col, 4)) {
+                board[m.row][m.col] = EMPTY;
+                return m;
+            }
+            board[m.row][m.col] = EMPTY;
+        }
+
+
+        for (Move m : moves) {
+            board[m.row][m.col] = humanPlayer;
+            if (isLineOfLength(m.row, m.col, 4)) {
+                board[m.row][m.col] = EMPTY;
+                return m;
+            }
+            board[m.row][m.col] = EMPTY;
+        }
+
+
+        for (Move m : moves) {
+            board[m.row][m.col] = aiPlayer;
+            if (isLineOfLength(m.row, m.col, 3)) {
+                board[m.row][m.col] = EMPTY;
+                return m;
+            }
+            board[m.row][m.col] = EMPTY;
+        }
+
+
+        for (Move m : moves) {
+            board[m.row][m.col] = humanPlayer;
+            if (isLineOfLength(m.row, m.col, 3)) {
+                board[m.row][m.col] = EMPTY;
+                return m;
+            }
+            board[m.row][m.col] = EMPTY;
+        }
+
+        // fallback
+        return moves.isEmpty() ? null : moves.get(0);
+    }
+
+
+}
